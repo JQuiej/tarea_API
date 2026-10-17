@@ -1,0 +1,158 @@
+### SoundWave API — peticiones de ejemplo
+### Requiere la extensión "REST Client" de VS Code (humao.rest-client).
+### Haz clic en "Send Request" sobre cada petición, en orden.
+
+@base = http://localhost:3000/api/v1
+
+### 1. Planes disponibles (público, no requiere token)
+GET {{base}}/subscriptions/plans
+
+### 2. Registrar un cliente nuevo
+# @name register
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "ana@correo.com",
+  "password": "MiClave#2026",
+  "displayName": "Ana López",
+  "country": "GT"
+}
+
+### 3. Iniciar sesión (guarda los tokens automáticamente)
+# @name login
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@soundwave.local",
+  "password": "Demo#2026Seguro"
+}
+
+@token = {{login.response.body.accessToken}}
+@refresh = {{login.response.body.refreshToken}}
+
+### 4. Mi perfil
+GET {{base}}/users/me
+Authorization: Bearer {{token}}
+
+### 5. Petición SIN token → 401
+GET {{base}}/users/me
+
+### 6. Listar canciones (paginado, ordenado por popularidad)
+# @name tracks
+GET {{base}}/tracks?page=1&limit=5&sort=popular
+Authorization: Bearer {{token}}
+
+@trackId = {{tracks.response.body.data[0].id}}
+
+### 7. Búsqueda global
+GET {{base}}/search?q=luna&type=track,artist
+Authorization: Bearer {{token}}
+
+### 8. Reproducir canción (Free = vista previa con anuncios)
+POST {{base}}/tracks/{{trackId}}/play
+Authorization: Bearer {{token}}
+
+### 9. Dar "me gusta"
+PUT {{base}}/users/me/liked-tracks/{{trackId}}
+Authorization: Bearer {{token}}
+
+### 10. Crear playlist
+# @name playlist
+POST {{base}}/playlists
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Para programar",
+  "description": "Música para concentrarse",
+  "isPublic": true
+}
+
+@playlistId = {{playlist.response.body.id}}
+
+### 11. Agregar canción a la playlist
+POST {{base}}/playlists/{{playlistId}}/tracks
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "trackId": "{{trackId}}" }
+
+### 12. Ver la playlist
+GET {{base}}/playlists/{{playlistId}}
+Authorization: Bearer {{token}}
+
+### 13. Suscribirse a Premium (pago simulado con token de pasarela)
+POST {{base}}/subscriptions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "planId": "premium", "paymentToken": "tok_visa" }
+
+### 14. Renovar el access token
+POST {{base}}/auth/refresh
+Content-Type: application/json
+
+{ "refreshToken": "{{refresh}}" }
+
+### 15. Intentar endpoint de admin con usuario normal → 403
+GET {{base}}/users
+Authorization: Bearer {{token}}
+
+### ---------- ADMIN ----------
+
+### 16. Login como administrador
+# @name adminLogin
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@soundwave.local",
+  "password": "Admin#2026Seguro"
+}
+
+@adminToken = {{adminLogin.response.body.accessToken}}
+
+### 17. Listar usuarios (admin)
+GET {{base}}/users?search=demo
+Authorization: Bearer {{adminToken}}
+
+### 18. Crear artista (admin)
+# @name artist
+POST {{base}}/artists
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "name": "Nuevo Artista", "genre": "Indie", "country": "GT" }
+
+### 19. Crear álbum (admin)
+# @name album
+POST {{base}}/albums
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "artistId": "{{artist.response.body.id}}",
+  "title": "Primer Álbum",
+  "releaseDate": "2026-10-01",
+  "type": "album"
+}
+
+### 20. Crear canción (admin)
+POST {{base}}/tracks
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "albumId": "{{album.response.body.id}}",
+  "title": "Canción de prueba",
+  "durationMs": 195000,
+  "explicit": false
+}
+
+### 21. Cerrar sesión
+POST {{base}}/auth/logout
+Content-Type: application/json
+
+{ "refreshToken": "{{refresh}}" }
